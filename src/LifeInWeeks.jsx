@@ -88,7 +88,7 @@ function drawLifeGrid(canvas, {
   const getColor = (absWeek) => {
     const a = absWeek / 52;
     for (const ph of phases) {
-      if (a >= ph.startAge && a <= ph.endAge + 1) return ph.color;
+      if (!ph.hidden && a >= ph.startAge && a <= ph.endAge + 1) return ph.color;
     }
     return null;
   };
@@ -97,30 +97,50 @@ function drawLifeGrid(canvas, {
   const gridW = 52 * step - gapPx;
   const gridH = 90 * step - gapPx;
 
-  let labelW = 0, padX = cellPx * 4, padY = cellPx * 4;
+  // Always use fixed padding for width so the aspect ratio is stable
+  // For gridOnly (Clean) mode, reduce padding to fill more space
+  const padScale = gridOnly ? 0.4 : 1.0;
+  const labelW = cellPx * 4.5 * padScale;
+  const padX = cellPx * 5 * padScale;
+  const padLeft = padX + labelW;
+  const padRight = padX + labelW;
+
+  canvas.width = Math.round(padLeft + gridW + padRight);
+  // Enforce a 9:16 mobile phone proportion for the poster shape
+  canvas.height = Math.round(canvas.width * (16 / 9));
+
   let headerH = 0, monthLabelH = 0, legendH = 0;
 
   if (!gridOnly) {
-    labelW = cellPx * 4.5;
-    padX = cellPx * 5;
-    padY = cellPx * 6;
     headerH = cellPx * 18;
     monthLabelH = cellPx * 2.5;
     if (showLegend) {
       const cols = 4;
-      const rows = Math.ceil(phases.length / cols);
-      legendH = cellPx * 3 + (rows * cellPx * 2);
+      const visiblePhases = phases.filter(ph => !ph.hidden);
+      const rows = Math.ceil(visiblePhases.length / cols);
+      legendH = rows > 0 ? cellPx * 3 + (rows * cellPx * 2) : 0;
     }
     if (!showTitle) {
       headerH -= cellPx * 4.5; // reduce header height if title off
     }
   }
 
-  const padLeft = padX + labelW;
-  const padRight = padX + labelW;
+  // Calculate the total height of current content to vertically center it
+  const currentContentH = headerH + monthLabelH + gridH + legendH;
 
-  canvas.width = Math.round(padLeft + gridW + padRight);
-  canvas.height = Math.round(padY + headerH + monthLabelH + gridH + legendH + padY);
+  // Track the ideal 16:9 vertical height
+  let finalHeight = canvas.height;
+
+  // Fallback: only increase height if elements physically cannot fit.
+  // We prefer shrinking padding instead of increasing canvas size
+  if (currentContentH > finalHeight - cellPx * 4) {
+    finalHeight = Math.round(currentContentH + cellPx * 4);
+  }
+
+  canvas.height = finalHeight;
+
+  // Vertically center the content in the fixed canvas, avoiding negative padding
+  const padY = Math.max(cellPx * 2, (canvas.height - currentContentH) / 2);
 
   const ctx = canvas.getContext("2d");
   const BG = darkMode ? "#070B14" : "#F8F7F3";
@@ -248,12 +268,8 @@ function drawLifeGrid(canvas, {
         ctx.fillStyle = col || (darkMode ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)");
         ctx.fill();
       } else if (abs === livedWeeks) {
-        ctx.save();
-        ctx.shadowColor = darkMode ? "#FFFFFF" : "#0A0A0A";
-        ctx.shadowBlur = cellPx * 1.5;
-        ctx.fillStyle = INK;
+        ctx.fillStyle = INK; /* Already white in dark mode, black in light mode */
         ctx.fill();
-        ctx.restore();
       } else {
         ctx.fillStyle = FUTURE_F;
         ctx.fill();
@@ -278,8 +294,10 @@ function drawLifeGrid(canvas, {
     const colWidth = Math.floor(gridW / cols);
     const rowHeight = cellPx * 2; // tighter vertical space
 
-    for (let i = 0; i < phases.length; i++) {
-      const ph = phases[i];
+    const visiblePhases = phases.filter(ph => !ph.hidden);
+
+    for (let i = 0; i < visiblePhases.length; i++) {
+      const ph = visiblePhases[i];
       const r = Math.floor(i / cols);
       const c = i % cols;
 
@@ -315,6 +333,7 @@ export default function LifeInWeeks() {
   const [rounding, setRounding] = useState(0.3);
   const [exportIdx, setExportIdx] = useState(1);
   const [previewMode, setPreviewMode] = useState(false);
+  const [isDraggingRounding, setIsDraggingRounding] = useState(false);
   const previewRef = useRef(null);
 
   const redraw = useCallback(() => {
@@ -385,9 +404,18 @@ export default function LifeInWeeks() {
     phaseRow: { display: "flex", gap: 6, alignItems: "center", marginBottom: 8 },
     swatch: (col) => ({ width: 22, height: 22, borderRadius: 4, background: col, flexShrink: 0, cursor: "pointer", border: "1px solid rgba(255,255,255,0.15)", position: "relative" }),
     pInput: { flex: 1, width: "50px", background: "transparent", border: "none", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "#E2E2E8", fontSize: 11, fontFamily: "'Inter', sans-serif", padding: "4px 0", outline: "none", fontWeight: 500 },
-    numIn: { width: 40, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 4, color: "#E2E2E8", padding: "4px", fontSize: 11, fontFamily: "'Inter', sans-serif", outline: "none", textAlign: "center" },
-    canvas: { maxWidth: "100%", minHeight: 0, borderRadius: 8, boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)", objectFit: "contain" },
-    tag: { fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: "0.05em", fontWeight: 500 },
+    // We'll remove inline S.main styles and use CSS classes for glassmorphism
+    canvas: {
+      maxWidth: "100%",
+      minHeight: 0,
+      borderRadius: 16, // Smoother border-radius for poster
+      padding: 12, // Ensure poster contents aren't squeezed
+      background: darkMode ? "#070B14" : "#F8F7F3",
+      transition: "border 0.3s ease, box-shadow 0.3s ease",
+      boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)",
+      objectFit: "contain"
+    },
+    tag: { fontSize: 11, color: darkMode ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.5)", letterSpacing: "0.05em", fontWeight: 500 },
     toggle: (on) => ({ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", userSelect: "none", padding: "6px 0" }),
     toggleDot: (on) => ({ width: 34, height: 20, borderRadius: 10, background: on ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.15)", position: "relative", transition: "background 0.2s", flexShrink: 0 }),
     toggleThumb: (on) => ({ position: "absolute", top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: 8, background: on ? "#08080F" : "rgba(255,255,255,0.6)", transition: "left 0.2s cubic-bezier(0.4, 0.0, 0.2, 1)" }),
@@ -416,13 +444,39 @@ export default function LifeInWeeks() {
         {/* Options */}
         <div style={S.section}>
           <label style={S.label}>Display Options</label>
-          <div style={S.toggle(darkMode)} onClick={() => setDarkMode(v => !v)}>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>Dark Theme</span>
-            <div style={S.toggleDot(darkMode)}>
-              <div style={S.toggleThumb(darkMode)} />
-            </div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+            <button
+              style={{
+                ...S.btn, flex: 1, padding: "6px 0", textAlign: "center", fontSize: 11,
+                background: gridOnly ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.05)",
+                borderColor: gridOnly ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.15)",
+                color: gridOnly ? "#08080F" : "#E2E2E8",
+                fontWeight: gridOnly ? 600 : 400,
+              }}
+              onClick={() => { setGridOnly(true); setShowTitle(false); setShowLegend(false); }}
+            >Clean</button>
+            <button
+              style={{
+                ...S.btn, flex: 1, padding: "6px 0", textAlign: "center", fontSize: 11,
+                background: !gridOnly && !showTitle && !showLegend ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.05)",
+                borderColor: !gridOnly && !showTitle && !showLegend ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.15)",
+                color: !gridOnly && !showTitle && !showLegend ? "#08080F" : "#E2E2E8",
+                fontWeight: !gridOnly && !showTitle && !showLegend ? 600 : 400,
+              }}
+              onClick={() => { setGridOnly(false); setShowTitle(false); setShowLegend(false); }}
+            >Data</button>
+            <button
+              style={{
+                ...S.btn, flex: 1, padding: "6px 0", textAlign: "center", fontSize: 11,
+                background: !gridOnly && showTitle && showLegend ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.05)",
+                borderColor: !gridOnly && showTitle && showLegend ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.15)",
+                color: !gridOnly && showTitle && showLegend ? "#08080F" : "#E2E2E8",
+                fontWeight: !gridOnly && showTitle && showLegend ? 600 : 400,
+              }}
+              onClick={() => { setGridOnly(false); setShowTitle(true); setShowLegend(true); }}
+            >Full</button>
           </div>
-          <div style={{ ...S.toggle(showTitle), marginTop: 6 }} onClick={() => setShowTitle(v => !v)}>
+          <div style={{ ...S.toggle(showTitle) }} onClick={() => setShowTitle(v => !v)}>
             <span style={{ fontSize: 12, color: gridOnly ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.8)", fontWeight: 500 }}>Show Top Title</span>
             <div style={{ ...S.toggleDot(showTitle), opacity: gridOnly ? 0.3 : 1 }}>
               <div style={S.toggleThumb(showTitle)} />
@@ -449,13 +503,17 @@ export default function LifeInWeeks() {
             <input
               type="range" min="0" max="0.5" step="0.05"
               value={rounding} onChange={e => setRounding(parseFloat(e.target.value))}
+              onMouseDown={() => setIsDraggingRounding(true)}
+              onMouseUp={() => setIsDraggingRounding(false)}
+              onTouchStart={() => setIsDraggingRounding(true)}
+              onTouchEnd={() => setIsDraggingRounding(false)}
               style={{ ...S.slider, marginTop: 8 }}
             />
           </div>
         </div>
 
         {/* Life Phases */}
-        <div style={{ ...S.section, flex: 1 }}>
+        <div style={{ ...S.section, flex: "none" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <label style={{ ...S.label, marginBottom: 0 }}>Life Phases</label>
             <select style={{ ...S.select, width: "auto" }} value={paletteName} onChange={handlePaletteChange}>
@@ -484,6 +542,23 @@ export default function LifeInWeeks() {
                 style={S.numIn} type="number" min={1} max={90} value={ph.endAge}
                 onChange={e => updatePhase(ph.id, "endAge", +e.target.value)}
               />
+              <button
+                style={{ background: "transparent", border: "none", padding: "0 4px", cursor: "pointer", display: "flex", alignItems: "center", justifyItems: "center" }}
+                onClick={() => updatePhase(ph.id, "hidden", !ph.hidden)}
+                title={ph.hidden ? "Show Phase" : "Hide Phase"}
+              >
+                {ph.hidden ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                )}
+              </button>
             </div>
           ))}
           <button
@@ -518,19 +593,97 @@ export default function LifeInWeeks() {
       </div>
 
       {/* ── Preview ────────────────────────────────────────── */}
-      <div className="app-main">
-        <button
-          className="preview-toggle"
-          onClick={() => setPreviewMode(!previewMode)}
-          title={previewMode ? "Exit Preview" : "Enter Preview"}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={previewMode ? "#3B82F6" : "rgba(255,255,255,0.4)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 0.3s ease" }}>
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
-        </button>
-        <canvas ref={previewRef} style={S.canvas} className="app-canvas" />
-        <div style={{ ...S.tag, display: previewMode ? 'none' : 'block' }}>PREVIEW · Click Export PNG to download full resolution</div>
+      <div className={`app-main view-bg view-bg-${darkMode ? "dark" : "light"}`}>
+        {/* Animated background neon blobs */}
+        <div className="blob blob-1"></div>
+        <div className="blob blob-2"></div>
+        <div className="glass-pane"></div>
+
+        {isDraggingRounding && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: darkMode ? 'rgba(30, 30, 40, 0.35)' : 'rgba(255, 255, 255, 0.35)',
+            width: 260,
+            height: 260,
+            borderRadius: 24,
+            boxShadow: darkMode
+              ? '0 20px 60px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.15), 0 0 0 1px rgba(255,255,255,0.1)'
+              : '0 20px 60px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.9), 0 0 0 1px rgba(0,0,0,0.05)',
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 24,
+            backdropFilter: 'blur(32px)',
+            WebkitBackdropFilter: 'blur(32px)',
+            pointerEvents: 'none',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div style={{
+              width: 120,
+              height: 120,
+              background: phases[0]?.color || '#3B82F6',
+              borderRadius: 120 * rounding,
+              boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.2)'
+            }} />
+            <div style={{
+              fontSize: 16,
+              fontWeight: 600,
+              color: darkMode ? '#FFF' : '#000',
+              fontFamily: "'Inter', sans-serif",
+              letterSpacing: '0.05em'
+            }}>
+              {Math.round(rounding * 100)}% Rounding
+            </div>
+          </div>
+        )}
+        <div className="preview-grid-container" style={{ display: "flex", justifyContent: "center", width: "100%", zIndex: 10, margin: "auto 0" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", maxWidth: "100%" }}>
+            <canvas ref={previewRef} style={S.canvas} className={`app-canvas canvas-border-${darkMode ? "dark" : "light"}`} />
+            <div style={{ ...S.tag, display: previewMode ? 'none' : 'block', marginTop: 16, textAlign: "center" }}>PREVIEW · Click Export PNG to download full resolution</div>
+          </div>
+        </div>
+
+        <div className="preview-actions-wrapper">
+          <button
+            className={`preview-toggle ${darkMode ? "preview-toggle-dark" : "preview-toggle-light"}`}
+            onClick={() => setPreviewMode(!previewMode)}
+            title={previewMode ? "Exit Preview" : "Enter Preview"}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={previewMode ? "#3B82F6" : (darkMode ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.6)")} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 0.3s ease" }}>
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+
+          <button
+            className={`preview-toggle ${darkMode ? "preview-toggle-dark" : "preview-toggle-light"}`}
+            onClick={() => setDarkMode(!darkMode)}
+            title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {darkMode ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

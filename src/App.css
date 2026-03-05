@@ -1,13 +1,13 @@
 #root {
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   margin: 0;
   padding: 0;
 }
 
 .app-wrap {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   background: #08080F;
   color: #E2E2E8;
@@ -25,6 +25,15 @@
   flex-direction: column;
   overflow-y: auto;
   transition: transform 0.3s ease;
+}
+
+@media (min-width: 769px) {
+
+  .app-sidebar::before,
+  .app-sidebar::after {
+    content: "";
+    flex: auto;
+  }
 }
 
 .app-main {
@@ -46,18 +55,15 @@
 }
 
 .preview-mode .app-main {
-  padding: 0;
-  justify-content: center;
+  padding: 40px 0;
+  /* Enable clean vertical margins */
+  justify-content: flex-start;
+  /* Ensure top space isn't swallowed by centering */
 }
 
 .preview-toggle {
-  position: absolute;
-  top: 16px;
-  right: 16px;
+  position: relative;
   z-index: 50;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
   border-radius: 50%;
   width: 44px;
   height: 44px;
@@ -70,8 +76,146 @@
   transition: background 0.2s, opacity 0.3s;
 }
 
-.preview-toggle:hover {
+.preview-toggle-dark {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.preview-toggle-dark:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+.preview-toggle-light {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #000;
+}
+
+.preview-toggle-light:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.preview-actions-wrapper {
+  position: absolute;
+  top: 40px;
+  right: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 50;
+}
+
+/* Glassmorphism Backgrounds */
+.view-bg {
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s ease;
+}
+
+.view-bg-dark {
+  background: #05050A;
+}
+
+.view-bg-light {
+  background: #EAEAEA;
+}
+
+/* Base Neon Blobs */
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+  opacity: 0.5;
+  animation: float 10s infinite ease-in-out alternate;
+}
+
+.view-bg-dark .blob-1 {
+  width: 400px;
+  height: 400px;
+  background: rgba(59, 130, 246, 0.4);
+  top: -100px;
+  left: -100px;
+}
+
+.view-bg-dark .blob-2 {
+  width: 500px;
+  height: 500px;
+  background: rgba(139, 92, 246, 0.3);
+  bottom: -150px;
+  right: -50px;
+  animation-delay: -5s;
+}
+
+.view-bg-light .blob-1 {
+  width: 400px;
+  height: 400px;
+  background: rgba(59, 130, 246, 0.3);
+  top: -100px;
+  left: -100px;
+}
+
+.view-bg-light .blob-2 {
+  width: 500px;
+  height: 500px;
+  background: rgba(236, 72, 153, 0.2);
+  bottom: -150px;
+  right: -50px;
+  animation-delay: -5s;
+}
+
+/* The frosted glass overlay that sits on top of the blobs */
+.glass-pane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  z-index: 1;
+}
+
+.view-bg-dark .glass-pane {
+  background: rgba(5, 5, 10, 0.6);
+}
+
+.view-bg-light .glass-pane {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Canvas Borders */
+.app-canvas {
+  position: relative;
+  z-index: 10;
+  pointer-events: none;
+  max-width: 100%;
+  max-height: calc(100dvh - 80px);
+  /* Fit within desktop height, minus padding */
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  /* Let clicks pass through if needed, though mostly visual */
+}
+
+.canvas-border-dark {
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.canvas-border-light {
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    transform: translateY(30px) scale(1.05);
+  }
 }
 
 @media (max-width: 768px) {
@@ -81,26 +225,61 @@
 
   .app-sidebar {
     width: 100%;
-    height: 45vh;
+    height: 35dvh;
     border-right: none;
     border-top: 1px solid rgba(255, 255, 255, 0.07);
   }
 
   .app-main {
-    height: 55vh;
+    height: 65dvh;
     flex: unset;
-    padding-top: 16px;
-    padding-bottom: 16px;
+    padding: 0;
+    justify-content: flex-start;
   }
 
   .preview-mode .app-main {
-    height: 100vh;
+    height: 100dvh;
     padding: 0;
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .app-canvas {
-    max-height: 100%;
-    max-width: 100%;
+    height: auto;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .preview-grid-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    padding: 16px 16px 12px !important;
+    width: 100vw !important;
+    box-sizing: border-box !important;
+    margin: auto 0 0 0 !important;
+  }
+
+  .preview-grid-container .app-canvas {
+    max-width: 100% !important;
+    max-height: calc(65dvh - 140px) !important;
+  }
+
+  .preview-mode .preview-grid-container .app-canvas {
+    max-height: calc(100dvh - 140px) !important;
+  }
+
+  .preview-actions-wrapper {
+    position: static !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    padding-left: 0 !important;
+    gap: 16px !important;
+    width: 100%;
+    margin: 0 !important;
+    padding-bottom: 16px !important;
+    z-index: 50;
   }
 }
