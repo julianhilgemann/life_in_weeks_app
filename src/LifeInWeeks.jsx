@@ -76,19 +76,19 @@ function drawLifeGrid(canvas, {
   const birthDate = new Date(birthday + "T00:00:00");
   const now = new Date();
 
-  // Calculate lived weeks precisely
-  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-  const livedWeeks = Math.max(0, Math.floor((now - birthDate) / msPerWeek));
+  // Map real time to a strict 52-weeks-per-year scale to align with the grid
+  const exactAge = (now - birthDate) / (365.25 * 24 * 60 * 60 * 1000);
+  const livedWeeks = Math.max(0, Math.floor(exactAge * 52));
   const totalWeeks = 90 * 52;
 
-  const age = ((now - birthDate) / (365.25 * 24 * 60 * 60 * 1000)).toFixed(1);
+  const age = exactAge.toFixed(1);
   const bornStr = `Born ${birthDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`;
   const ageStr = `Age ${isNaN(age) ? '0' : age}`;
 
   const getColor = (absWeek) => {
     const a = absWeek / 52;
     for (const ph of phases) {
-      if (!ph.hidden && a >= ph.startAge && a <= ph.endAge + 1) return ph.color;
+      if (!ph.hidden && a >= ph.startAge && a < ph.endAge + 1) return ph.color;
     }
     return null;
   };
