@@ -334,6 +334,9 @@ export default function LifeInWeeks() {
   const [exportIdx, setExportIdx] = useState(1);
   const [previewMode, setPreviewMode] = useState(false);
   const [isDraggingRounding, setIsDraggingRounding] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showSupportPopup, setShowSupportPopup] = useState(false);
+  const [pendingExportIdx, setPendingExportIdx] = useState(null);
   const previewRef = useRef(null);
 
   const redraw = useCallback(() => {
@@ -352,6 +355,13 @@ export default function LifeInWeeks() {
     setPhases(PALETTES[pName]);
   };
 
+  const triggerExport = (idxOrEvent) => {
+    const actualIdx = typeof idxOrEvent === 'number' ? idxOrEvent : exportIdx;
+    setPendingExportIdx(actualIdx);
+    setShowExportMenu(false);
+    setShowSupportPopup(true);
+  };
+
   const handlePhaseColorChange = (id, val) => {
     setPaletteName("Full Custom");
     setPhases(prev => prev.map(p => p.id === id ? { ...p, color: val } : p));
@@ -360,9 +370,11 @@ export default function LifeInWeeks() {
   const updatePhase = (id, field, val) =>
     setPhases(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p));
 
-  const handleExport = () => {
+  const executeExport = () => {
     try {
-      const preset = EXPORT_PRESETS[exportIdx];
+      if (pendingExportIdx === null) return;
+
+      const preset = EXPORT_PRESETS[pendingExportIdx];
       const off = document.createElement("canvas");
       drawLifeGrid(off, {
         birthday, phases, title, darkMode, showLegend, showTitle, gridOnly, rounding,
@@ -381,19 +393,22 @@ export default function LifeInWeeks() {
         a.click();
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        setShowSupportPopup(false);
+        setPendingExportIdx(null);
       }, "image/png");
     } catch (err) {
       console.error(err);
       alert("Error generating export: " + err.message);
+      setShowSupportPopup(false);
+      setPendingExportIdx(null);
     }
   };
 
   // ── Styles ──────────────────────────────────────────────
   const S = {
-    sHead: { padding: "20px 24px 0", borderBottom: "1px solid rgba(255,255,255,0.07)", paddingBottom: 16 },
-    sTitle: { fontSize: 11, letterSpacing: "0.12em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", marginBottom: 14, fontWeight: 600 },
     section: { padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)" },
-    label: { fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", marginBottom: 8, display: "block", fontWeight: 600 },
+    label: { fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 6, fontWeight: 600 },
     input: { width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "#E2E2E8", padding: "8px 10px", fontSize: 12, fontFamily: "'Inter', sans-serif", boxSizing: "border-box", outline: "none", transition: "border 0.2s" },
     select: { width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "#E2E2E8", padding: "6px 8px", fontSize: 11, fontFamily: "'Inter', sans-serif", boxSizing: "border-box", outline: "none" },
     slider: { width: "100%", cursor: "pointer", accentColor: "#FFFFFF" },
@@ -408,7 +423,7 @@ export default function LifeInWeeks() {
     canvas: {
       maxWidth: "100%",
       minHeight: 0,
-      borderRadius: 16, // Smoother border-radius for poster
+      borderRadius: 8, // Smoother, slightly rounded border-radius for poster
       padding: 12, // Ensure poster contents aren't squeezed
       background: darkMode ? "#070B14" : "#F8F7F3",
       transition: "border 0.3s ease, box-shadow 0.3s ease",
@@ -423,27 +438,55 @@ export default function LifeInWeeks() {
 
   return (
     <div className={`app-wrap ${previewMode ? "preview-mode" : ""}`}>
+      {/* ── Navbar ────────────────────────────────────────── */}
+      <div className={`pill-navbar ${darkMode ? "pill-navbar-dark" : "pill-navbar-light"}`}>
+        <div style={{ display: "flex", flex: 1, justifyContent: "flex-start" }}>
+          <div className="navbar-logo" style={{ display: "flex", alignItems: "center" }}>
+            <svg style={{ height: "20px", width: "auto" }} viewBox="0 0 496.05 496.05" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="248.02" cy="248.02" r="240.02" fill="none" stroke={darkMode ? "#FFFFFF" : "#0A0A0A"} strokeMiterlimit="10" strokeWidth="24px" />
+              <polygon points="414.8 247.47 410.09 270.25 367.27 271.43 339.39 386.13 294.21 385.74 323.68 270.65 258.47 270.65 264.75 247.87 329.57 247.08 365.31 110 410.09 109.6 373.95 247.47 414.8 247.47" fill={darkMode ? "#FFFFFF" : "#0A0A0A"} />
+              <path d="M196.7,262s-16-1-41.88.54c-55.68,3.24-70.22,41-71,63.83-2.4,69.53,84,63.73,109.2-14.34,11.07-34.27,45.19-175.44,46.2-177-36.09-.3-112.1-.45-112.1-.45s2.66-10.16,6.49-23.61l155.25-.25c-.2,1.05-25,106.7-47.43,183.68C215,385.08,146.67,399.39,125,398.4c-34.13-1.54-62.45-27.88-62.45-72.27C62.51,290,92.36,245.7,155.6,246l44.88-.2Z" transform="translate(-1.71 -1.87)" fill={darkMode ? "#FFFFFF" : "#0A0A0A"} />
+            </svg>
+          </div>
+        </div>
+        <div style={{ display: "flex", flex: 1, justifyContent: "center" }}>
+          <div className="navbar-text">Life in Weeks Poster Generator</div>
+        </div>
+        <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}>
+          <a href="https://github.com/julianhilgemann" target="_blank" rel="noopener noreferrer" className="navbar-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+            </svg>
+          </a>
+        </div>
+      </div>
+
       {/* ── Sidebar ────────────────────────────────────────── */}
       <div className="app-sidebar">
-        <div style={S.sHead}>
-          <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "0.04em", marginBottom: 4 }}>Life in Weeks</div>
-          <div style={S.sTitle}>Poster Generator</div>
-        </div>
 
         {/* Basics */}
         <div style={S.section}>
-          <label style={S.label}>Poster Title</label>
+          <label style={S.label}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+            Poster Title
+          </label>
           <input value={title} onChange={e => setTitle(e.target.value)} disabled={gridOnly || !showTitle} style={{ ...S.input, opacity: (gridOnly || !showTitle) ? 0.4 : 1 }} />
         </div>
 
         <div style={S.section}>
-          <label style={S.label}>Birthday</label>
+          <label style={S.label}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" /><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1" /><path d="M2 21h20" /><path d="M7 8v3" /><path d="M12 8v3" /><path d="M17 8v3" /><path d="M7 4h.01" /><path d="M12 4h.01" /><path d="M17 4h.01" /></svg>
+            Birthday
+          </label>
           <input style={S.input} type="date" value={birthday} onChange={e => setBirthday(e.target.value)} />
         </div>
 
         {/* Options */}
         <div style={S.section}>
-          <label style={S.label}>Display Options</label>
+          <label style={S.label}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
+            Display Options
+          </label>
           <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
             <button
               style={{
@@ -501,7 +544,7 @@ export default function LifeInWeeks() {
               <span style={S.valTag}>{Math.round(rounding * 100)}%</span>
             </div>
             <input
-              type="range" min="0" max="0.5" step="0.05"
+              type="range" min="0" max="0.5" step="0.01"
               value={rounding} onChange={e => setRounding(parseFloat(e.target.value))}
               onMouseDown={() => setIsDraggingRounding(true)}
               onMouseUp={() => setIsDraggingRounding(false)}
@@ -515,7 +558,10 @@ export default function LifeInWeeks() {
         {/* Life Phases */}
         <div style={{ ...S.section, flex: "none" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <label style={{ ...S.label, marginBottom: 0 }}>Life Phases</label>
+            <label style={{ ...S.label, marginBottom: 0 }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+              Life Phases
+            </label>
             <select style={{ ...S.select, width: "auto" }} value={paletteName} onChange={handlePaletteChange}>
               {Object.keys(PALETTES).map(p => <option key={p} value={p}>{p}</option>)}
             </select>
@@ -568,7 +614,7 @@ export default function LifeInWeeks() {
         </div>
 
         {/* Export */}
-        <div style={{ ...S.section, paddingBottom: 24 }}>
+        <div className="sidebar-export-section" style={{ ...S.section, paddingBottom: 24 }}>
           <label style={S.label}>Export Resolution</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
             {EXPORT_PRESETS.map((p, i) => (
@@ -586,9 +632,49 @@ export default function LifeInWeeks() {
               >{p.label}</button>
             ))}
           </div>
-          <button style={S.btnPrimary} onClick={handleExport}>
+          <button style={S.btnPrimary} onClick={triggerExport}>
             ↓ EXPORT PNG
           </button>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: "24px",
+          paddingBottom: "32px",
+          textAlign: "center",
+          fontSize: "12px",
+          color: "#FFFFFF",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "8px",
+          marginTop: "auto"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
+            Made with
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#EF4444" stroke="none">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            </svg>
+            and
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C4A484" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+              <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+              <line x1="6" y1="1" x2="6" y2="4"></line>
+              <line x1="10" y1="1" x2="10" y2="4"></line>
+              <line x1="14" y1="1" x2="14" y2="4"></line>
+            </svg>
+            by Julian Hilgemann
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            <a href="https://www.julianhilgemann.com" target="_blank" rel="noopener noreferrer" style={{ color: "#FFFFFF", textDecoration: "none", transition: "opacity 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = 0.7} onMouseOut={e => e.currentTarget.style.opacity = 1}>
+              www.julianhilgemann.com
+            </a>
+          </div>
         </div>
       </div>
 
@@ -639,12 +725,21 @@ export default function LifeInWeeks() {
             }}>
               {Math.round(rounding * 100)}% Rounding
             </div>
+            <div style={{
+              fontSize: 12,
+              color: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+              fontFamily: "'Inter', sans-serif",
+              textAlign: 'center',
+              padding: '0 24px',
+              lineHeight: 1.4
+            }}>
+              Preview of cell border radius as it will appear on the final poster
+            </div>
           </div>
         )}
-        <div className="preview-grid-container" style={{ display: "flex", justifyContent: "center", width: "100%", zIndex: 10, margin: "auto 0" }}>
+        <div className="preview-grid-container" style={{ display: "flex", justifyContent: "center", width: "100%", zIndex: 10, margin: "0" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", maxWidth: "100%" }}>
             <canvas ref={previewRef} style={S.canvas} className={`app-canvas canvas-border-${darkMode ? "dark" : "light"}`} />
-            <div style={{ ...S.tag, display: previewMode ? 'none' : 'block', marginTop: 16, textAlign: "center" }}>PREVIEW · Click Export PNG to download full resolution</div>
           </div>
         </div>
 
@@ -683,7 +778,83 @@ export default function LifeInWeeks() {
               </svg>
             )}
           </button>
+
+          <div className="mobile-export-wrapper" style={{ position: "relative" }}>
+            <button
+              className={`preview-toggle ${darkMode ? "preview-toggle-dark" : "preview-toggle-light"}`}
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              title="Export PNG"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={darkMode ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.6)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
+            {showExportMenu && (
+              <>
+                <div
+                  style={{ position: 'fixed', inset: 0, zIndex: 90 }}
+                  onClick={() => setShowExportMenu(false)}
+                />
+                <div className={`export-context-menu ${darkMode ? "export-context-menu-dark" : "export-context-menu-light"}`}>
+                  {EXPORT_PRESETS.map((p, i) => (
+                    <button
+                      key={i}
+                      className="export-menu-item"
+                      onClick={() => triggerExport(i)}
+                    >
+                      <span>{p.label}</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
+
+        {/* Support Popup Overlay */}
+        {showSupportPopup && (
+          <div className="support-popup-overlay">
+            <div className={`support-popup ${darkMode ? "support-popup-dark" : "support-popup-light"}`}>
+              <div className="support-popup-content">
+                <h3 style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 600, color: darkMode ? "#FFF" : "#0A0A0A" }}>Support my work</h3>
+                <p style={{ margin: "0 0 24px 0", fontSize: 14, color: darkMode ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.6)", lineHeight: 1.5 }}>
+                  If you found this tool useful and want to support its continued development, consider buying me a coffee!
+                </p>
+
+                <div style={{ display: "flex", gap: 12, justifyContent: "space-between" }}>
+                  <button
+                    className="support-btn-secondary"
+                    onClick={executeExport}
+                  >
+                    Just Download
+                  </button>
+                  <a
+                    href="https://buymeacoffee.com/julianhilgemann"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="support-btn-primary"
+                    onClick={() => {
+                      executeExport();
+                    }}
+                  >
+                    ☕ Buy me a coffee
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: -1 }}
+              onClick={() => setShowSupportPopup(false)}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
