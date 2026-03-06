@@ -423,7 +423,7 @@ export default function LifeInWeeks() {
     canvas: {
       maxWidth: "100%",
       minHeight: 0,
-      borderRadius: 8, // Smoother, slightly rounded border-radius for poster
+      borderRadius: 4, // Smoother, slightly rounded border-radius for poster
       padding: 12, // Ensure poster contents aren't squeezed
       background: darkMode ? "#070B14" : "#F8F7F3",
       transition: "border 0.3s ease, box-shadow 0.3s ease",
@@ -615,7 +615,10 @@ export default function LifeInWeeks() {
 
         {/* Export */}
         <div className="sidebar-export-section" style={{ ...S.section, paddingBottom: 24 }}>
-          <label style={S.label}>Export Resolution</label>
+          <label style={S.label}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+            Export Resolution
+          </label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
             {EXPORT_PRESETS.map((p, i) => (
               <button
