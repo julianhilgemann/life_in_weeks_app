@@ -438,19 +438,19 @@ export default function LifeInWeeks() {
       {/* ── Navbar ────────────────────────────────────────── */}
       <div className={`pill-navbar ${darkMode ? "pill-navbar-dark" : "pill-navbar-light"}`}>
         <div style={{ display: "flex", flex: 1, justifyContent: "flex-start" }}>
-          <div className="navbar-logo" style={{ display: "flex", alignItems: "center" }}>
+          <a href="https://www.julianhilgemann.com/start" target="_blank" rel="noopener noreferrer" className="navbar-logo" style={{ display: "flex", alignItems: "center" }}>
             <svg style={{ height: "20px", width: "auto" }} viewBox="0 0 496.05 496.05" xmlns="http://www.w3.org/2000/svg">
               <circle cx="248.02" cy="248.02" r="240.02" fill="none" stroke={darkMode ? "#FFFFFF" : "#0A0A0A"} strokeMiterlimit="10" strokeWidth="24px" />
               <polygon points="414.8 247.47 410.09 270.25 367.27 271.43 339.39 386.13 294.21 385.74 323.68 270.65 258.47 270.65 264.75 247.87 329.57 247.08 365.31 110 410.09 109.6 373.95 247.47 414.8 247.47" fill={darkMode ? "#FFFFFF" : "#0A0A0A"} />
               <path d="M196.7,262s-16-1-41.88.54c-55.68,3.24-70.22,41-71,63.83-2.4,69.53,84,63.73,109.2-14.34,11.07-34.27,45.19-175.44,46.2-177-36.09-.3-112.1-.45-112.1-.45s2.66-10.16,6.49-23.61l155.25-.25c-.2,1.05-25,106.7-47.43,183.68C215,385.08,146.67,399.39,125,398.4c-34.13-1.54-62.45-27.88-62.45-72.27C62.51,290,92.36,245.7,155.6,246l44.88-.2Z" transform="translate(-1.71 -1.87)" fill={darkMode ? "#FFFFFF" : "#0A0A0A"} />
             </svg>
-          </div>
+          </a>
         </div>
         <div style={{ display: "flex", flex: 1, justifyContent: "center" }}>
           <div className="navbar-text">Life in Weeks Poster Generator</div>
         </div>
         <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}>
-          <a href="https://github.com/julianhilgemann" target="_blank" rel="noopener noreferrer" className="navbar-icon">
+          <a href="https://github.com/julianhilgemann/lifeinweeks" target="_blank" rel="noopener noreferrer" className="navbar-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
               <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
             </svg>
