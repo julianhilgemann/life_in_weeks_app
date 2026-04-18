@@ -2,7 +2,7 @@
 
 > Visualize your entire life as a grid of 4,680 weeks. Customize it. Export it. Put it on your wall.
 
-**🔗 [Try it live → julianhilgemann.github.io/lifeinweeks](https://julianhilgemann.github.io/lifeinweeks/)**
+**🔗 [Try it live → julianhilgemann.github.io/lifeinweeks](https://julianhilgemann.github.io/life_in_weeks_app/)**
 
 ![Life in Weeks Poster Generator Screenshot](src/assets/screenshot.png)
 
