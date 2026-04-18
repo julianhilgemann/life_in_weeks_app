@@ -1,9 +1,9 @@
 {
-  "name": "lifeinweeks",
+  "name": "life_in_weeks_app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://julianhilgemann.github.io/lifeinweeks",
+  "homepage": "https://julianhilgemann.github.io/life_in_weeks_app/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
