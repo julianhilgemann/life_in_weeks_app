@@ -79,7 +79,7 @@ npm run dev
 
 ## Support
 
-Built by [Julian Hilgemann](https://www.julianhilgemann.com).
+Built by [Julian Hilgemann](https://julianhilgemann.com/start/?utm_source=github&utm_medium=referral&utm_campaign=lifeinweeks&utm_content=app).
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-Support_this_project-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/julianhilgemann)
 
